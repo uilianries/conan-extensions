@@ -16,10 +16,10 @@ conan bump-detection conan-center-index/recipes/boost
 
 import os
 import json
-import yaml
 import re
 import subprocess
 import inspect
+import yaml
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
@@ -29,9 +29,10 @@ from conan.errors import ConanException
 def output_json(result):
     cli_out_write(json.dumps(result, indent=2, sort_keys=True))
 
+
 def output_text(result):
-    cli_out_write("BUMP VERSION: {}".format(True if result["bump_version"] else False))
-    bump_dependencies = True if result["bump_requirements"] or result["bump_tools_requirements"] or result["bump_test_requirements"] else False
+    cli_out_write(f"BUMP VERSION: {bool(result.get('bump_version'))}")
+    bump_dependencies = bool(result.get("bump_requirements") or result.get("bump_tools_requirements") or result.get("bump_test_requirements"))
     if result["bump_version"]:
         cli_out_write("BUMP VERSION LIST")
         cli_out_write(f"{', '.join(result['bump_version'])}")
@@ -47,6 +48,7 @@ def output_text(result):
         cli_out_write(f"{', '.join(result['bump_test_requirements'])}")
     cli_out_write("")
 
+
 def get_branch_commit_hash(branch_name: str) -> str:
     """
     Detect a git hash commit from a git branch name in the local copy of the repository
@@ -59,10 +61,10 @@ def get_branch_commit_hash(branch_name: str) -> str:
         result = subprocess.run(['git', 'rev-parse', branch_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as error:
-        raise ConanException(f"Could not get git branch commit: {error}")
+        raise ConanException(f"Could not get git branch commit: {error}") from error
 
 
-def git_diff_regular(commit_hash_old: str, commit_hash_new: str, kwargs=[]) -> str:
+def git_diff_regular(commit_hash_old: str, commit_hash_new: str, kwargs=()) -> str:
     """
     Get git diff output content from two different git branches
 
@@ -71,7 +73,7 @@ def git_diff_regular(commit_hash_old: str, commit_hash_new: str, kwargs=[]) -> s
         result = subprocess.run(['git', 'diff', *kwargs, commit_hash_old, commit_hash_new], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         return result.stdout
     except subprocess.CalledProcessError as error:
-        raise ConanException(f"Could not run git diff: {error}")
+        raise ConanException(f"Could not run git diff: {error}") from error
 
 
 def git_diff_filenames(commit_hash_old: str, commit_hash_new: str, relative=False) -> list:
@@ -79,19 +81,20 @@ def git_diff_filenames(commit_hash_old: str, commit_hash_new: str, relative=Fals
     result = git_diff_regular(commit_hash_old, commit_hash_new, params)
     return [it for it in result.split('\n') if it != '']
 
+
 def get_file_content_by_commit(commit_hash: str, file_path: str) -> str:
     try:
         result = subprocess.run(['git', 'show', f"{commit_hash}:{file_path}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as error:
-        raise ConanException(f"Could not show file content: {error}")
+        raise ConanException(f"Could not show file content: {error}") from error
 
 
 def load_yaml_content(file_content: str):
     try:
         return yaml.safe_load(file_content)
     except yaml.YAMLError as error:
-        raise ConanException(f"Error loading YAML: {error}")
+        raise ConanException(f"Error loading YAML: {error}") from error
 
 
 def get_config_yml_versions(commit_hash: str, yaml_path: str) -> list:
@@ -101,6 +104,7 @@ def get_config_yml_versions(commit_hash: str, yaml_path: str) -> list:
     if 'versions' in config_yml and isinstance(config_yml['versions'], list):
         versions = config_yml['versions']
     return versions
+
 
 def recursive_yaml_diff(yaml_old, yaml_new):
     differences = {}
