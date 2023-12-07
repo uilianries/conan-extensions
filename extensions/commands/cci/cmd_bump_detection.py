@@ -123,6 +123,7 @@ def recursive_yaml_diff(yaml_old, yaml_new):
 
     return differences
 
+
 def compare_yaml_files(commit_hash_old: str, commit_hash_new: str, yaml_path: str) -> dict:
     yml_content_old = get_file_content_by_commit(commit_hash_old, yaml_path)
     yml_content_new = get_file_content_by_commit(commit_hash_new, yaml_path)
@@ -176,7 +177,13 @@ def detect_bump_version(commit_hash_old: str, commit_hash_new: str, output: Cona
             output.warning(f"Found non-semver format added to config.yml: {version}. Skipping ...")
             return []
 
-    # TODO: Parse conandata.yml and check if the new version is added
+    compare_result = compare_yaml_files(commit_hash_old, commit_hash_new, conandata_list[0])
+    if compare_result.keys() != {'sources'}:
+        # INFO: Only versions in sources should be changed
+        return []
+
+    # TODO: Only sources: -> url: and sources: -> sha256: should be changed
+    # TODO: Check if the URL of the new version is the same as the URL of the previous version
 
     return added_versions
 
@@ -199,12 +206,11 @@ def bump_detection(_, parser, *args):
     out.info(f"Old Git hash commit: {old_commit}")
     out.info(f"New Git hash commit: {current_commit}")
 
-    bump_version = detect_bump_version(old_commit, current_commit, out)
     bump_requirements = []
     bump_tools_requirements = []
     bump_test_requirements = []
 
-    return {"bump_version": bump_version,
+    return {"bump_version": detect_bump_version(old_commit, current_commit, out),
             "bump_requirements": bump_requirements,
             "bump_tools_requirements": bump_tools_requirements,
             "bump_test_requirements": bump_test_requirements,}
