@@ -95,7 +95,7 @@ def test_config_yml_add_version(version, expected_bump_version):
     assert json_data == {"bump_version": expected_bump_version, "bump_requirements": [], "bump_tools_requirements": [], "bump_test_requirements": []}
 
 
-def test_update_more_than_bump_version():
+def test_add_conanfile():
     """
     Only when changing config.yml and conandata.yml should be classified as bump version
     """
@@ -107,6 +107,74 @@ def test_update_more_than_bump_version():
                 """)
     save("all/conanfile.py", conanfile)
     run("git add config.yml all/conandata.yml all/conanfile.py")
+    run(f"git commit -m 'Add package'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
+
+
+def test_add_extra_entry_in_config_root():
+    """
+    Only versions should be changed in config.yml to be classified as bump version
+    """
+    config_yml = textwrap.dedent(f"""
+                versions:
+                  "0.1.0":
+                    folder: "all"
+                  "0.1.1":
+                    folder: "all"
+                foobar:
+                  "0.1.0":
+                    folder: "all"
+                """)
+    conandata_yml = textwrap.dedent(f"""
+                sources:
+                  "0.1.0":
+                    sha256: "507eb7b8d1015fbec5b935f34ebed15bf346bed04a11ab82b8eee848c4205aea"
+                    url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                  "0.1.1":
+                    sha256: "f0471ff5f578e2e71673470f9703d453794d6c014c5448511afa0077e0a16a4a"
+                    url: "http://foobar.com/downloads/0.1.1.tar.gz"
+                """)
+    save("config.yml", config_yml)
+    save("all/conandata.yml", conandata_yml)
+
+    run("git add config.yml all/conandata.yml")
+    run(f"git commit -m 'Add package'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
+
+
+def test_add_extra_entry_in_config_version():
+    """
+    Only folder should be allowed under versions in config.yml to be classified as bump version
+    """
+    config_yml = textwrap.dedent(f"""
+                    versions:
+                      "0.1.0":
+                        folder: "all"
+                      "0.1.1":
+                        folder: "all"
+                        description: "Version 0.1.1"
+                    """)
+    conandata_yml = textwrap.dedent(f"""
+                    sources:
+                      "0.1.0":
+                        sha256: "507eb7b8d1015fbec5b935f34ebed15bf346bed04a11ab82b8eee848c4205aea"
+                        url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                      "0.1.1":
+                        sha256: "f0471ff5f578e2e71673470f9703d453794d6c014c5448511afa0077e0a16a4a"
+                        url: "http://foobar.com/downloads/0.1.1.tar.gz"
+                    """)
+    save("config.yml", config_yml)
+    save("all/conandata.yml", conandata_yml)
+
+    run("git add config.yml all/conandata.yml")
     run(f"git commit -m 'Add package'")
 
     run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
