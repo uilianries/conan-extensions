@@ -184,18 +184,18 @@ def bump_detection(_, parser, *args):
     """
     # TODO: Add support to recipe folder path
     # parser.add_argument('path', help="Path to package folder e.g. recipes/boost")
-    parser.add_argument('-m', '--master-commit', action=OnceArgument, help="Git commit hash of the master branch", default='master')
-    parser.add_argument('-b', '--branch-commit', action=OnceArgument, help="Git commit hash of branch with new changes", default='HEAD')
+    parser.add_argument('-o', '--old-commit', action=OnceArgument, help="Git commit hash of the older branch", default='master')
+    parser.add_argument('-n', '--new-commit', action=OnceArgument, help="Git commit hash of branch with new changes", default='HEAD')
     args = parser.parse_args(*args)
 
     out = ConanOutput()
-    master_commit = get_branch_commit_hash(args.master_commit)
-    current_commit = get_branch_commit_hash(args.branch_commit)
+    old_commit = get_branch_commit_hash(args.old_commit)
+    current_commit = get_branch_commit_hash(args.new_commit)
 
-    out.info(f"master commit (old): {master_commit}")
-    out.info(f"branch commit (new): {current_commit}")
+    out.info(f"Old Git hash commit: {old_commit}")
+    out.info(f"New Git hash commit: {current_commit}")
 
-    bump_version = detect_bump_version(master_commit, current_commit, out)
+    bump_version = detect_bump_version(old_commit, current_commit, out)
     bump_requirements = []
     bump_tools_requirements = []
     bump_test_requirements = []
