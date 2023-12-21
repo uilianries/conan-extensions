@@ -230,3 +230,85 @@ def test_remove_version():
     json_data = json.loads(load("output.json"))
     assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
                          "bump_test_requirements": []}
+
+
+def test_change_checksum():
+    """
+    Changing checksum should not be classified as bump version
+    """
+    conandata_yml = textwrap.dedent("""
+                sources:
+                  "0.1.0":
+                    sha256: "9693387b9bc697799a4249d34946827549b81bb03f4ff6847e9b12b6a750ef46"
+                    url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                """)
+    save("all/conandata.yml", conandata_yml)
+    run("git add all/conandata.yml")
+    run("git commit -m 'Change checksum'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
+
+
+def test_change_checksum_and_bump_version():
+    """
+    Changing checksum should not be classified as bump version when bumping a version
+    """
+    config_yml = textwrap.dedent(f"""
+                        versions:
+                          "0.1.0":
+                            folder: "all"
+                          "0.1.1":
+                            folder: "all"
+                        """)
+    conandata_yml = textwrap.dedent(f"""
+                        sources:
+                          "0.1.0":
+                            sha256: "9693387b9bc697799a4249d34946827549b81bb03f4ff6847e9b12b6a750ef46"
+                            url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                          "0.1.1":
+                            sha256: "f0471ff5f578e2e71673470f9703d453794d6c014c5448511afa0077e0a16a4a"
+                            url: "http://foobar.com/downloads/0.1.1.tar.gz"
+                        """)
+    save("config.yml", config_yml)
+    save("all/conandata.yml", conandata_yml)
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'Change checksum'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
+
+
+def test_change_urn_and_bump_version():
+    """
+    The new version should have the same host as the previous version
+    """
+    config_yml = textwrap.dedent(f"""
+                        versions:
+                          "0.1.0":
+                            folder: "all"
+                          "0.1.1":
+                            folder: "all"
+                        """)
+    conandata_yml = textwrap.dedent(f"""
+                        sources:
+                          "0.1.0":
+                            sha256: "507eb7b8d1015fbec5b935f34ebed15bf346bed04a11ab82b8eee848c4205aea"
+                            url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                          "0.1.1":
+                            sha256: "f0471ff5f578e2e71673470f9703d453794d6c014c5448511afa0077e0a16a4a"
+                            url: "http://acme.com/downloads/0.1.1.tar.gz"
+                        """)
+    save("config.yml", config_yml)
+    save("all/conandata.yml", conandata_yml)
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'Change checksum'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
