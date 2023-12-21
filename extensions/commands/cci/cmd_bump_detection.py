@@ -195,7 +195,7 @@ def bump_detection(_, parser, *args):
     """
     # TODO: Add support to recipe folder path
     # parser.add_argument('path', help="Path to package folder e.g. recipes/boost")
-    parser.add_argument('-o', '--old-commit', action=OnceArgument, help="Git commit hash of the older branch", default='master')
+    parser.add_argument('-o', '--old-commit', action=OnceArgument, help="Git commit hash of the older branch", default='origin/master/refs/HEAD')
     parser.add_argument('-n', '--new-commit', action=OnceArgument, help="Git commit hash of branch with new changes", default='HEAD')
     args = parser.parse_args(*args)
 
