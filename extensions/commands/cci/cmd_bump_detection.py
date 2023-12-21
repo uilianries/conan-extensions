@@ -20,6 +20,7 @@ import re
 import subprocess
 import inspect
 import yaml
+import sys
 
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
@@ -101,8 +102,17 @@ def get_config_yml_versions(commit_hash: str, yaml_path: str) -> list:
     yml_content = get_file_content_by_commit(commit_hash, yaml_path)
     config_yml = load_yaml_content(yml_content)
     versions = []
-    if 'versions' in config_yml and isinstance(config_yml['versions'], list):
-        versions = config_yml['versions']
+    if 'versions' in config_yml and isinstance(config_yml['versions'], dict):
+        versions = list(config_yml['versions'].keys())
+    return versions
+
+
+def get_conandata_yml_versions(commit_hash: str, yaml_path: str) -> list:
+    yml_content = get_file_content_by_commit(commit_hash, yaml_path)
+    conandata_yml = load_yaml_content(yml_content)
+    versions = []
+    if 'sources' in conandata_yml and isinstance(conandata_yml['sources'], dict):
+        versions = list(conandata_yml['sources'].keys())
     return versions
 
 
@@ -181,6 +191,17 @@ def detect_bump_version(commit_hash_old: str, commit_hash_new: str, output: Cona
     if compare_result.keys() != {'sources'}:
         # INFO: Only versions in sources should be changed
         return []
+
+    config_yml_versions = get_config_yml_versions(commit_hash_new, config_list[0])
+    conandata_yaml_versions = get_conandata_yml_versions(commit_hash_new, conandata_list[0])
+    if sorted(config_yml_versions) != sorted(conandata_yaml_versions):
+        # INFO: The versions in config.yml and conandata.yml must be the same
+        return []
+
+
+    #if not all('added' in source_info and len(source_info['added']) == 1 and 'url' in source_info['added'] and 'sha256' in source_info['added'] for source_info in compare_result['sources'].values()):
+    #    # INFO: Only new versions should be added and the url and sha256 entries are allowed to sources
+    #    return []
 
     # TODO: Only sources: -> url: and sources: -> sha256: should be changed
     # TODO: Check if the URL of the new version is the same as the URL of the previous version

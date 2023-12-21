@@ -312,3 +312,37 @@ def test_change_urn_and_bump_version():
     json_data = json.loads(load("output.json"))
     assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
                          "bump_test_requirements": []}
+
+
+def test_add_extra_version_in_config():
+    """
+    Versions should match between config.yml and conandata.yml
+    """
+    config_yml = textwrap.dedent(f"""
+                    versions:
+                      "0.1.0":
+                        folder: "all"
+                      "0.1.1":
+                        folder: "all"
+                      "0.2.0":
+                        folder: "all"
+                    """)
+    conandata_yml = textwrap.dedent(f"""
+                    sources:
+                      "0.1.0":
+                        sha256: "507eb7b8d1015fbec5b935f34ebed15bf346bed04a11ab82b8eee848c4205aea"
+                        url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                      "0.1.1":
+                        sha256: "f0471ff5f578e2e71673470f9703d453794d6c014c5448511afa0077e0a16a4a"
+                        url: "http://foobar.com/downloads/0.1.1.tar.gz"
+                    """)
+    save("config.yml", config_yml)
+    save("all/conandata.yml", conandata_yml)
+
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'Add new versions'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
