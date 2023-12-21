@@ -72,6 +72,7 @@ def _save_config_conandata(pkg_version):
     save("config.yml", config_yml)
     save("all/conandata.yml", conandata_yml)
 
+
 @pytest.mark.parametrize("version, expected_bump_version", [
     ("0.1.1", ["0.1.1"]),
     ("0.2", ["0.2"]),
@@ -88,7 +89,7 @@ def test_config_yml_add_version(version, expected_bump_version):
     _save_config_conandata(version)
 
     run("git add config.yml all/conandata.yml")
-    run(f"git commit -m 'Add version {version}'")
+    run("git commit -m 'Add version {version}'")
 
     run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
     json_data = json.loads(load("output.json"))
@@ -107,7 +108,7 @@ def test_add_conanfile():
                 """)
     save("all/conanfile.py", conanfile)
     run("git add config.yml all/conandata.yml all/conanfile.py")
-    run(f"git commit -m 'Add package'")
+    run("git commit -m 'Add package'")
 
     run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
     json_data = json.loads(load("output.json"))
@@ -142,7 +143,7 @@ def test_add_extra_entry_in_config_root():
     save("all/conandata.yml", conandata_yml)
 
     run("git add config.yml all/conandata.yml")
-    run(f"git commit -m 'Add package'")
+    run("git commit -m 'Add package'")
 
     run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
     json_data = json.loads(load("output.json"))
@@ -175,7 +176,55 @@ def test_add_extra_entry_in_config_version():
     save("all/conandata.yml", conandata_yml)
 
     run("git add config.yml all/conandata.yml")
-    run(f"git commit -m 'Add package'")
+    run("git commit -m 'Add package'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
+
+
+def test_replace_version():
+    """
+    Replacing a version should be classified as bump version
+    """
+    _save_config_conandata("0.2.0")
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'Add version 0.2.0'")
+
+    _save_config_conandata("0.3.0")
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'Add version 0.3.0'")
+
+    run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
+    json_data = json.loads(load("output.json"))
+    assert json_data == {"bump_version": [], "bump_requirements": [], "bump_tools_requirements": [],
+                         "bump_test_requirements": []}
+
+
+def test_remove_version():
+    """
+    Remove a version should not be classified as bump version
+    """
+    _save_config_conandata("0.2.0")
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'Add version 0.2.0'")
+
+    config_yml = textwrap.dedent("""
+                versions:
+                  "0.1.0":
+                    folder: "all"
+                """)
+    conandata_yml = textwrap.dedent("""
+                sources:
+                  "0.1.0":
+                    sha256: "507eb7b8d1015fbec5b935f34ebed15bf346bed04a11ab82b8eee848c4205aea"
+                    url: "http://foobar.com/downloads/0.1.0.tar.gz"
+                """)
+    save("config.yml", config_yml)
+    save("all/conandata.yml", conandata_yml)
+    run("git add config.yml all/conandata.yml")
+    run("git commit -m 'remove version 0.2.0'")
 
     run("conan cci:bump-detection --old-commit=HEAD~1 --new-commit=HEAD  --format json > output.json")
     json_data = json.loads(load("output.json"))
